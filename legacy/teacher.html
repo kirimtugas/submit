@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STMS - Teacher Dashboard</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <style>
+        .dashboard-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 250px;
+            background-color: var(--surface-color);
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+            padding: 2rem 1rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+
+        .nav-item {
+            padding: 1rem;
+            cursor: pointer;
+            border-radius: var(--border-radius);
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+            transition: var(--transition);
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            background-color: rgba(98, 0, 234, 0.1);
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div style="margin-bottom: 2rem; text-align: center;">
+                <h1 style="color: var(--primary-color); margin: 0;">STMS</h1>
+                <p style="color: var(--text-secondary); font-size: 0.9rem;">Teacher Portal</p>
+            </div>
+
+            <div class="nav-item active" onclick="switchTab('overview')">Ringkasan</div>
+            <div class="nav-item" onclick="switchTab('classes')">Manajemen Kelas</div>
+            <div class="nav-item" onclick="switchTab('students')">Daftar Siswa</div>
+            <div class="nav-item" onclick="switchTab('tasks')">Daftar Tugas</div>
+            <div class="nav-item" onclick="switchTab('gradebook')">Rekap Nilai</div>
+
+            <div style="margin-top: auto;">
+                <div class="nav-item" onclick="logout()" style="color: #b00020;">Keluar</div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Header -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h2 id="page-title">Ringkasan</h2>
+                <div id="user-info">Loading...</div>
+            </div>
+
+            <!-- Overview Tab -->
+            <div id="tab-overview" class="tab-content fade-in">
+                <div class="grid-3">
+                    <div class="stat-card">
+                        <div class="stat-number" id="stat-students">0</div>
+                        <div>Total Siswa</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="stat-classes">0</div>
+                        <div>Total Kelas</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="stat-tasks">0</div>
+                        <div>Tugas Aktif</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Tugas Perlu Dinilai</h3>
+                    <div id="pending-grading-list">
+                        <p class="text-secondary">Tidak ada tugas yang perlu dinilai.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Classes Tab -->
+            <div id="tab-classes" class="tab-content hidden fade-in">
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+                        <h3>Daftar Kelas</h3>
+                        <button class="btn btn-primary" onclick="showAddClassModal()">+ Tambah Kelas</button>
+                    </div>
+                    <div id="classes-list">
+                        <!-- Class items will be populated here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Students Tab -->
+            <div id="tab-students" class="tab-content hidden fade-in">
+                <div class="card">
+                    <h3>Daftar Siswa</h3>
+                    <div class="form-group">
+                        <input type="text" class="form-control" placeholder="Cari siswa..."
+                            onkeyup="filterStudents(this.value)">
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="text-align: left; border-bottom: 2px solid #eee;">
+                                <th style="padding: 1rem;">Nama</th>
+                                <th style="padding: 1rem;">Kelas</th>
+                                <th style="padding: 1rem;">Email</th>
+                                <th style="padding: 1rem;">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="students-list">
+                            <!-- Student items will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tasks Tab -->
+            <div id="tab-tasks" class="tab-content hidden fade-in">
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+                        <h3>Daftar Tugas</h3>
+                        <button class="btn btn-primary" onclick="showAddTaskModal()">+ Buat Tugas</button>
+                    </div>
+                    <div id="tasks-list">
+                        <!-- Task items will be populated here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gradebook Tab -->
+            <div id="tab-gradebook" class="tab-content hidden fade-in">
+                <div class="card">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3>Rekap Nilai</h3>
+                        <div style="display: flex; gap: 1rem;">
+                            <select id="gradebook-class-filter" class="form-control" onchange="loadGradebook()">
+                                <option value="">Semua Kelas</option>
+                                <!-- Options populated via JS -->
+                            </select>
+                            <button class="btn btn-outline" onclick="exportToCSV()">Export Excel/CSV</button>
+                        </div>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse; min-width: 800px;">
+                            <thead>
+                                <tr id="gradebook-header" style="text-align: left; background-color: #f9f9f9;">
+                                    <!-- Headers populated via JS -->
+                                </tr>
+                            </thead>
+                            <tbody id="gradebook-body">
+                                <!-- Data populated via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Add Class Modal -->
+    <div id="modal-add-class" class="hidden"
+        style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 100;">
+        <div class="card" style="width: 400px;">
+            <h3>Tambah Kelas Baru</h3>
+            <div class="form-group">
+                <label class="form-label">Nama Kelas</label>
+                <input type="text" id="new-class-name" class="form-control" placeholder="Contoh: X RPL 1">
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 1rem;">
+                <button class="btn btn-outline" onclick="toggleElement('modal-add-class', false)">Batal</button>
+                <button class="btn btn-primary" onclick="createClass()">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Task Modal -->
+    <div id="modal-add-task" class="hidden"
+        style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 100;">
+        <div class="card" style="width: 600px; max-height: 90vh; overflow-y: auto;">
+            <h3>Buat Tugas Baru</h3>
+            <div class="form-group">
+                <label class="form-label">Judul Tugas</label>
+                <input type="text" id="task-title" class="form-control">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Deskripsi</label>
+                <textarea id="task-desc" class="form-control" rows="4"></textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Tenggat Waktu</label>
+                <input type="datetime-local" id="task-deadline" class="form-control">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Tugaskan ke Kelas</label>
+                <select id="task-class" class="form-control" multiple style="height: 100px;">
+                    <!-- Classes options -->
+                </select>
+                <small class="text-secondary">Tahan Ctrl/Cmd untuk memilih banyak kelas</small>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 1rem;">
+                <button class="btn btn-outline" onclick="toggleElement('modal-add-task', false)">Batal</button>
+                <button class="btn btn-primary" onclick="createTask()">Tugaskan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grading Modal -->
+    <div id="modal-grading" class="hidden"
+        style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 100;">
+        <div class="card" style="width: 700px; max-height: 90vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3>Penilaian Tugas</h3>
+                <button class="btn btn-outline" onclick="toggleElement('modal-grading', false)">Tutup</button>
+            </div>
+
+            <div id="grading-task-info"
+                style="margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid #eee;">
+                <!-- Task details -->
+            </div>
+
+            <div style="display: flex; gap: 1rem; height: 400px;">
+                <!-- Submissions List -->
+                <div style="width: 30%; border-right: 1px solid #eee; overflow-y: auto;" id="grading-students-list">
+                    <!-- Student list -->
+                </div>
+
+                <!-- Grading Area -->
+                <div style="width: 70%; padding-left: 1rem; display: flex; flex-direction: column;" id="grading-area">
+                    <div id="grading-content-view"
+                        style="flex: 1; overflow-y: auto; margin-bottom: 1rem; background: #f9f9f9; padding: 1rem; border-radius: 4px;">
+                        <p class="text-secondary" style="text-align: center; margin-top: 2rem;">Pilih siswa untuk
+                            menilai</p>
+                    </div>
+
+                    <div id="grading-form" class="hidden">
+                        <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                            <div style="flex: 1;">
+                                <label class="form-label">Nilai (0-100)</label>
+                                <input type="number" id="grade-input" class="form-control" min="0" max="100">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Komentar</label>
+                            <textarea id="grade-comment" class="form-control" rows="2"></textarea>
+                        </div>
+                        <button class="btn btn-primary" style="width: 100%; margin-bottom: 1rem;"
+                            onclick="submitGrade()">Simpan Nilai</button>
+
+                        <div style="display: flex; justify-content: space-between;">
+                            <button class="btn btn-outline" id="btn-prev-submission" onclick="prevSubmission()">←
+                                Sebelumnya</button>
+                            <button class="btn btn-outline" id="btn-next-submission"
+                                onclick="nextSubmission()">Selanjutnya →</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/firebase-config.js"></script>
+    <script src="assets/js/utils.js"></script>
+    <script src="assets/js/teacher.js"></script>
+</body>
+
+</html>

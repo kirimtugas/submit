@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STMS - Student Task Management System</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <div class="container" style="max-width: 500px; margin-top: 5vh;">
+        <div class="card fade-in">
+            <h1 style="text-align: center; color: var(--primary-color); margin-bottom: 2rem;">STMS</h1>
+            
+            <!-- Role Selection -->
+            <div style="display: flex; justify-content: center; margin-bottom: 2rem; gap: 1rem;">
+                <button id="btn-role-student" class="btn btn-primary" onclick="setRole('student')">Siswa</button>
+                <button id="btn-role-teacher" class="btn btn-outline" onclick="setRole('teacher')">Guru</button>
+            </div>
+
+            <!-- Forms Container -->
+            <div id="auth-forms">
+                <!-- Login Form -->
+                <form id="login-form" class="fade-in">
+                    <h2 id="form-title">Login Siswa</h2>
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" id="login-email" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" id="login-password" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Masuk</button>
+                    <p style="text-align: center; margin-top: 1rem;">
+                        Belum punya akun? <a href="#" onclick="toggleAuthMode()">Daftar di sini</a>
+                    </p>
+                </form>
+
+                <!-- Register Form -->
+                <form id="register-form" class="hidden fade-in">
+                    <h2 id="reg-form-title">Daftar Siswa</h2>
+                    
+                    <!-- Teacher Verification Code (Hidden by default) -->
+                    <div id="teacher-code-group" class="form-group hidden">
+                        <label class="form-label">Kode Verifikasi Guru</label>
+                        <input type="password" id="teacher-code" class="form-control" placeholder="******">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Nama Lengkap</label>
+                        <input type="text" id="reg-name" class="form-control" required>
+                    </div>
+
+                    <!-- Class Selection (Only for Students) -->
+                    <div id="class-select-group" class="form-group">
+                        <label class="form-label">Pilih Kelas</label>
+                        <select id="reg-class" class="form-control">
+                            <option value="">-- Pilih Kelas --</option>
+                            <!-- Options will be populated from Firestore -->
+                            <option value="demo-class">X RPL 1 (Demo)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" id="reg-email" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" id="reg-password" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Daftar</button>
+                    <p style="text-align: center; margin-top: 1rem;">
+                        Sudah punya akun? <a href="#" onclick="toggleAuthMode()">Login di sini</a>
+                    </p>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/firebase-config.js"></script>
+    <script src="assets/js/utils.js"></script>
+    <script src="assets/js/auth.js"></script>
+</body>
+</html>
