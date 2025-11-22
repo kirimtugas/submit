@@ -77,8 +77,7 @@ export default function DashboardLayout({ children }) {
                     x: sidebarOpen ? 0 : -300
                 }}
                 transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                className={`fixed left-0 top-0 h-full bg-white border-r border-blue-100 text-slate-600 w-64 shadow-2xl flex flex-col ${isMobile ? 'z-50' : 'z-30 lg:relative'
-                    }`}
+                className={`fixed left-0 top-0 h-full bg-white border-r border-blue-100 text-slate-600 w-64 shadow-2xl flex flex-col z-50`}
             >
                 <div className="p-6 flex-1 overflow-y-auto">
                     <h1 className="text-2xl font-bold mb-8 tracking-tight text-blue-600">
@@ -120,7 +119,10 @@ export default function DashboardLayout({ children }) {
             </motion.aside>
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col overflow-hidden">
+            <div
+                className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ${sidebarOpen && !isMobile ? 'lg:ml-64' : 'ml-0'
+                    }`}
+            >
                 {/* Header */}
                 <header className="bg-white/80 backdrop-blur-md border-b border-blue-100 px-4 sm:px-6 py-4 flex items-center justify-between sticky top-0 z-30 flex-shrink-0">
                     <button
