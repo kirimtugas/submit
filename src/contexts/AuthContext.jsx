@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { auth, db } from "../lib/firebase";
-import { onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
+import { onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, setPersistence, browserLocalPersistence, browserSessionPersistence, sendPasswordResetEmail } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 
 const AuthContext = createContext();
@@ -56,7 +56,8 @@ export function AuthProvider({ children }) {
         return signOut(auth);
     };
 
-    const login = (email, password) => {
+    const login = async (email, password, rememberMe = false) => {
+        await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
         return signInWithEmailAndPassword(auth, email, password);
     };
 
@@ -81,6 +82,10 @@ export function AuthProvider({ children }) {
         return userCredential;
     };
 
+    const resetPassword = (email) => {
+        return sendPasswordResetEmail(auth, email);
+    };
+
     const value = {
         currentUser,
         userRole,
@@ -88,7 +93,8 @@ export function AuthProvider({ children }) {
         logout,
         login,
         register,
-        signup
+        signup,
+        resetPassword
     };
 
     return (

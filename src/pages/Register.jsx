@@ -4,14 +4,16 @@ import { useAuth } from '../contexts/AuthContext';
 import { db } from '../lib/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 import { motion } from 'framer-motion';
-import { UserPlus, Mail, Lock, User, AlertCircle, School, ArrowRight, GraduationCap, BookOpen } from 'lucide-react';
+import { UserPlus, Mail, Lock, User, AlertCircle, School, ArrowRight, GraduationCap, BookOpen, Eye, EyeOff } from 'lucide-react';
 
 export default function Register() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [name, setName] = useState('');
     const [role, setRole] = useState('student'); // 'student' or 'teacher'
     const [teacherCode, setTeacherCode] = useState('');
+    const [showTeacherCode, setShowTeacherCode] = useState(false);
     const [classId, setClassId] = useState('');
     const [classes, setClasses] = useState([]);
     const [error, setError] = useState('');
@@ -152,13 +154,20 @@ export default function Register() {
                                 <Lock className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                             </div>
                             <input
-                                type="password"
+                                type={showPassword ? "text" : "password"}
                                 required
-                                className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all group-hover:bg-white"
+                                className="w-full pl-11 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all group-hover:bg-white"
                                 placeholder="••••••••"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                             />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-blue-600 transition-colors focus:outline-none"
+                            >
+                                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                            </button>
                         </div>
                     </div>
 
@@ -230,13 +239,20 @@ export default function Register() {
                                     <School className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                                 </div>
                                 <input
-                                    type="password"
+                                    type={showTeacherCode ? "text" : "password"}
                                     required
-                                    className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all group-hover:bg-white"
+                                    className="w-full pl-11 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all group-hover:bg-white"
                                     placeholder="Masukkan kode khusus guru"
                                     value={teacherCode}
                                     onChange={(e) => setTeacherCode(e.target.value)}
                                 />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowTeacherCode(!showTeacherCode)}
+                                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-blue-600 transition-colors focus:outline-none"
+                                >
+                                    {showTeacherCode ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                                </button>
                             </div>
                         </motion.div>
                     )}

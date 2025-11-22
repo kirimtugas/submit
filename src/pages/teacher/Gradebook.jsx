@@ -113,7 +113,9 @@ export default function Gradebook() {
         }).filter(g => g > 0);
 
         const avgGrade = grades.length > 0 ? (grades.reduce((sum, g) => sum + g, 0) / grades.length).toFixed(1) : 0;
-        const totalTasks = tasks.length;
+        const totalTasks = selectedClass === 'all'
+            ? tasks.length
+            : tasks.filter(task => task.assignedClasses?.includes(selectedClass)).length;
         const completionRate = classStudents.length > 0 && totalTasks > 0
             ? ((submissions.filter(sub => classStudents.find(s => s.uid === sub.studentId)).length / (classStudents.length * totalTasks)) * 100).toFixed(0)
             : 0;

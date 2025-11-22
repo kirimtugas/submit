@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { Link, useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { motion } from 'framer-motion';
-import { Mail, Lock, AlertCircle, School, ArrowRight, LogIn, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, AlertCircle, School, ArrowRight, LogIn, Eye, EyeOff, CheckCircle } from 'lucide-react';
 
 export default function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [rememberMe, setRememberMe] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const { login, currentUser } = useAuth();
@@ -22,7 +23,7 @@ export default function Login() {
         try {
             setError('');
             setLoading(true);
-            await login(email, password);
+            await login(email, password, rememberMe);
             navigate('/');
         } catch (err) {
             setError('Gagal masuk. Periksa email dan password Anda.');
@@ -110,6 +111,24 @@ export default function Login() {
                                 {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                             </button>
                         </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2">
+                        <label className="flex items-center gap-2 cursor-pointer group">
+                            <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${rememberMe ? 'bg-blue-600 border-blue-600' : 'border-slate-300 bg-white group-hover:border-blue-400'}`}>
+                                {rememberMe && <CheckCircle className="h-3.5 w-3.5 text-white" />}
+                            </div>
+                            <input
+                                type="checkbox"
+                                className="hidden"
+                                checked={rememberMe}
+                                onChange={(e) => setRememberMe(e.target.checked)}
+                            />
+                            <span className="text-sm text-slate-600 font-medium group-hover:text-blue-600 transition-colors">Ingat Saya</span>
+                        </label>
+                        <Link to="/forgot-password" className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline">
+                            Lupa Password?
+                        </Link>
                     </div>
 
                     <button
