@@ -1,6 +1,6 @@
 import { Outlet, NavLink } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     LayoutDashboard,
     Users,
@@ -11,11 +11,26 @@ import {
     Menu,
     X
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function DashboardLayout({ children }) {
     const { currentUser, logout, userRole } = useAuth();
-    const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
+
+    // Detect mobile screen size
+    useEffect(() => {
+        const checkMobile = () => {
+            const mobile = window.innerWidth < 1024;
+            setIsMobile(mobile);
+            // Auto-open sidebar on desktop, closed on mobile
+            setSidebarOpen(!mobile);
+        };
+
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     const teacherMenuItems = [
         { path: '/teacher', icon: LayoutDashboard, label: 'Ringkasan' },
@@ -32,18 +47,43 @@ export default function DashboardLayout({ children }) {
     ];
 
     const menuItems = userRole === 'teacher' ? teacherMenuItems : studentMenuItems;
-    const title = userRole === 'teacher' ? 'STMS Teacher' : 'STMS Student';
+
+    // Close sidebar on navigation (mobile only)
+    const handleNavClick = () => {
+        if (isMobile) {
+            setSidebarOpen(false);
+        }
+    };
 
     return (
-        <div className="flex h-screen bg-sky-50">
+        <div className="flex h-screen bg-sky-50 overflow-hidden">
+            {/* Overlay for mobile */}
+            <AnimatePresence>
+                {sidebarOpen && isMobile && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setSidebarOpen(false)}
+                        className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+                    />
+                )}
+            </AnimatePresence>
+
             {/* Sidebar */}
             <motion.aside
-                initial={{ x: -300 }}
-                animate={{ x: sidebarOpen ? 0 : -300 }}
-                className="fixed left-0 top-0 h-full bg-white border-r border-blue-100 text-slate-600 w-64 shadow-2xl z-50 flex flex-col"
+                initial={false}
+                animate={{
+                    x: sidebarOpen ? 0 : -300
+                }}
+                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                className={`fixed left-0 top-0 h-full bg-white border-r border-blue-100 text-slate-600 w-64 shadow-2xl flex flex-col ${isMobile ? 'z-50' : 'z-30 lg:relative'
+                    }`}
             >
-                <div className="p-6 flex-1">
-                    <h1 className="text-2xl font-bold mb-8 tracking-tight text-blue-600">STMS <span className="font-light opacity-70 text-slate-400">{userRole === 'teacher' ? 'Teacher' : 'Student'}</span></h1>
+                <div className="p-6 flex-1 overflow-y-auto">
+                    <h1 className="text-2xl font-bold mb-8 tracking-tight text-blue-600">
+                        STMS <span className="font-light opacity-70 text-slate-400">{userRole === 'teacher' ? 'Teacher' : 'Student'}</span>
+                    </h1>
 
                     <nav className="space-y-2">
                         {menuItems.map((item) => (
@@ -51,6 +91,7 @@ export default function DashboardLayout({ children }) {
                                 key={item.path}
                                 to={item.path}
                                 end={item.path === '/teacher' || item.path === '/student'}
+                                onClick={handleNavClick}
                                 className={({ isActive }) =>
                                     `flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${isActive
                                         ? 'bg-blue-50 text-blue-600 shadow-sm font-semibold'
@@ -78,12 +119,13 @@ export default function DashboardLayout({ children }) {
             </motion.aside>
 
             {/* Main Content */}
-            <div className={`flex-1 transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-0'}`}>
+            <div className="flex-1 flex flex-col overflow-hidden">
                 {/* Header */}
-                <header className="bg-white/80 backdrop-blur-md border-b border-blue-100 px-6 py-4 flex items-center justify-between sticky top-0 z-40">
+                <header className="bg-white/80 backdrop-blur-md border-b border-blue-100 px-4 sm:px-6 py-4 flex items-center justify-between sticky top-0 z-30 flex-shrink-0">
                     <button
                         onClick={() => setSidebarOpen(!sidebarOpen)}
                         className="p-2 hover:bg-blue-50 rounded-lg transition-colors text-slate-600"
+                        aria-label={sidebarOpen ? 'Close menu' : 'Open menu'}
                     >
                         {sidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
                     </button>
@@ -91,20 +133,19 @@ export default function DashboardLayout({ children }) {
                     <div className="flex items-center gap-3">
                         <div className="text-right hidden sm:block">
                             <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Selamat datang</p>
-                            <p className="font-semibold text-slate-800">{currentUser?.email}</p>
+                            <p className="font-semibold text-slate-800 truncate max-w-[200px]">{currentUser?.email}</p>
                         </div>
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center text-white font-bold shadow-md shadow-blue-200">
+                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center text-white font-bold shadow-md shadow-blue-200 flex-shrink-0">
                             {currentUser?.email?.[0].toUpperCase()}
                         </div>
                     </div>
                 </header>
 
                 {/* Page Content */}
-                <main className="p-6">
+                <main className="flex-1 overflow-y-auto p-4 sm:p-6">
                     {children || <Outlet />}
                 </main>
             </div>
         </div>
     );
 }
-
