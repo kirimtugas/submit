@@ -212,7 +212,7 @@ export default function Classes() {
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 {/* Sidebar - Class List */}
-                <div className="lg:col-span-1 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col h-[calc(100vh-12rem)] sticky top-6">
+                <div className="lg:col-span-1 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col max-h-[500px] lg:h-[calc(100vh-12rem)] lg:sticky lg:top-6">
                     <div className="p-4 border-b border-slate-100 space-y-3 flex-shrink-0">
                         <div className="flex items-center justify-between">
                             <h3 className="font-bold text-slate-800">Daftar Kelas</h3>
@@ -313,7 +313,7 @@ export default function Classes() {
                             onBack={() => setSelectedClass(null)}
                         />
                     ) : (
-                        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 h-[calc(100vh-12rem)] flex flex-col items-center justify-center text-center p-8">
+                        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 min-h-[400px] lg:h-[calc(100vh-12rem)] flex flex-col items-center justify-center text-center p-8">
                             <div className="bg-slate-50 w-20 h-20 rounded-full flex items-center justify-center mb-4">
                                 <GraduationCap className="h-10 w-10 text-slate-400" />
                             </div>
