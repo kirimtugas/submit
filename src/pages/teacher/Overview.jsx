@@ -71,15 +71,29 @@ export default function TeacherOverview() {
                 return grade === null || grade === undefined;
             });
 
+            // Helper to parse date from Firestore Timestamp or String
+            const parseDate = (dateField) => {
+                if (!dateField) return null;
+                if (typeof dateField.toDate === 'function') return dateField.toDate();
+                if (typeof dateField.toMillis === 'function') return new Date(dateField.toMillis());
+                if (typeof dateField === 'string') return new Date(dateField);
+                if (dateField instanceof Date) return dateField;
+                return null;
+            };
+
             // Collect all activities
             const allActivities = [];
 
-            // 1. Submission Activities
+            // 1. Submission Activities (always include these)
             const recentSubs = submissionsSnap.docs
                 .filter(doc => doc.data().submittedAt)
-                .sort((a, b) => b.data().submittedAt?.toMillis() - a.data().submittedAt?.toMillis());
+                .sort((a, b) => {
+                    const dateA = parseDate(a.data().submittedAt);
+                    const dateB = parseDate(b.data().submittedAt);
+                    return (dateB?.getTime() || 0) - (dateA?.getTime() || 0);
+                });
 
-            for (const subDoc of recentSubs.slice(0, 10)) {
+            for (const subDoc of recentSubs) {
                 const sub = subDoc.data();
                 let studentName = 'Unknown Student';
                 let className = '';
@@ -100,7 +114,7 @@ export default function TeacherOverview() {
                 allActivities.push({
                     id: subDoc.id,
                     type: 'submission',
-                    timestamp: sub.submittedAt?.toDate(),
+                    timestamp: parseDate(sub.submittedAt),
                     taskId: sub.taskId,
                     studentName,
                     className,
@@ -115,16 +129,16 @@ export default function TeacherOverview() {
             const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
             studentsSnap.docs.forEach(doc => {
                 const student = doc.data();
-                const createdAt = student.createdAt;
-                // Add safety check for createdAt
-                if (createdAt && typeof createdAt.toMillis === 'function' && createdAt.toMillis() > sevenDaysAgo) {
+                const createdAt = parseDate(student.createdAt);
+
+                if (createdAt && createdAt.getTime() > sevenDaysAgo) {
                     const classDoc = classesSnap.docs.find(c => c.id === student.classId);
                     const className = classDoc?.data()?.name || 'Unknown Class';
 
                     allActivities.push({
                         id: `student-${doc.id}`,
                         type: 'new_student',
-                        timestamp: createdAt.toDate(),
+                        timestamp: createdAt,
                         studentName: student.name || student.email?.split('@')[0] || 'Unknown Student',
                         className,
                         classId: student.classId,
@@ -138,34 +152,33 @@ export default function TeacherOverview() {
             const threeDaysLater = new Date(now.getTime() + (3 * 24 * 60 * 60 * 1000));
             tasksSnap.docs.forEach(doc => {
                 const task = doc.data();
-                if (task.deadline) {
-                    const deadline = new Date(task.deadline);
-                    if (deadline > now && deadline <= threeDaysLater) {
-                        const daysUntil = Math.ceil((deadline - now) / (1000 * 60 * 60 * 24));
+                const deadline = parseDate(task.deadline);
 
-                        allActivities.push({
-                            id: `deadline-${doc.id}`,
-                            type: 'deadline',
-                            timestamp: deadline,
-                            taskTitle: task.title,
-                            taskId: doc.id,
-                            daysUntilDeadline: daysUntil,
-                            initial: '⏰'
-                        });
-                    }
+                if (deadline && deadline > now && deadline <= threeDaysLater) {
+                    const daysUntil = Math.ceil((deadline - now) / (1000 * 60 * 60 * 24));
+
+                    allActivities.push({
+                        id: `deadline-${doc.id}`,
+                        type: 'deadline',
+                        timestamp: deadline,
+                        taskTitle: task.title,
+                        taskId: doc.id,
+                        daysUntilDeadline: daysUntil,
+                        initial: '⏰'
+                    });
                 }
             });
 
             // 4. New Task Activities (within 7 days)
             tasksSnap.docs.forEach(doc => {
                 const task = doc.data();
-                const createdAt = task.createdAt;
-                // Add safety check for createdAt
-                if (createdAt && typeof createdAt.toMillis === 'function' && createdAt.toMillis() > sevenDaysAgo) {
+                const createdAt = parseDate(task.createdAt);
+
+                if (createdAt && createdAt.getTime() > sevenDaysAgo) {
                     allActivities.push({
                         id: `newtask-${doc.id}`,
                         type: 'new_task',
-                        timestamp: createdAt.toDate(),
+                        timestamp: createdAt,
                         taskTitle: task.title,
                         taskId: doc.id,
                         initial: '➕'
@@ -175,7 +188,7 @@ export default function TeacherOverview() {
 
             // Sort all activities by timestamp (most recent first) and limit to 10
             const sortedActivities = allActivities
-                .filter(a => a.timestamp) // Ensure timestamp exists
+                .filter(activity => activity.timestamp) // Filter out activities without timestamp
                 .sort((a, b) => b.timestamp - a.timestamp)
                 .slice(0, 10);
 

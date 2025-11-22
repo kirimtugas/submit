@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { db } from '../../lib/firebase';
 import { collection, query, where, getDocs, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Users, CheckCircle2, Clock, XCircle, Award, FileText, Calendar, BookOpen, Save, X, Edit2, Filter } from 'lucide-react';
+import { ArrowLeft, Users, CheckCircle2, Clock, XCircle, Award, FileText, Calendar, BookOpen, Save, X, Edit2, Filter, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 
 export default function TaskDetail({ task, classes = [], onBack }) {
     const [students, setStudents] = useState([]);
@@ -14,6 +14,7 @@ export default function TaskDetail({ task, classes = [], onBack }) {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
     const [filterClass, setFilterClass] = useState('all');
+    const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
 
     // Validate task object
     if (!task) {
@@ -160,15 +161,39 @@ export default function TaskDetail({ task, classes = [], onBack }) {
         // Try both uid and id as fallback
         const submission = submissions[student.uid] || submissions[student.id];
         if (!submission) {
-            return { status: 'not_submitted', label: 'Belum Submit', color: 'text-red-700', bgColor: 'bg-red-50', borderColor: 'border-red-200' };
+            return {
+                status: 'not_submitted',
+                label: 'Belum Submit',
+                color: 'text-red-700',
+                bgColor: 'bg-red-50',
+                borderColor: 'border-red-200',
+                icon: XCircle
+            };
         }
 
+        // Check if graded
+        if (submission.grade !== undefined && submission.grade !== null) {
+            return {
+                status: 'graded',
+                label: 'Sudah Dinilai',
+                color: 'text-blue-700',
+                bgColor: 'bg-blue-50',
+                borderColor: 'border-blue-200',
+                icon: CheckCircle2
+            };
+        }
+
+        // Submitted but not graded
         const isLate = new Date(submission.submittedAt?.toDate?.() || submission.submittedAt) > new Date(task.deadline);
-        if (isLate) {
-            return { status: 'late', label: 'Terlambat', color: 'text-yellow-700', bgColor: 'bg-yellow-50', borderColor: 'border-yellow-300' };
-        }
 
-        return { status: 'submitted', label: 'Sudah Submit', color: 'text-green-700', bgColor: 'bg-green-50', borderColor: 'border-green-300' };
+        return {
+            status: 'ungraded',
+            label: isLate ? 'Terlambat & Belum Dinilai' : 'Belum Dinilai',
+            color: 'text-amber-700',
+            bgColor: 'bg-amber-50',
+            borderColor: 'border-amber-200',
+            icon: Clock
+        };
     };
 
     const formatDate = (date) => {
@@ -234,6 +259,63 @@ export default function TaskDetail({ task, classes = [], onBack }) {
         ? students
         : students.filter(student => student.classId === filterClass);
 
+    // Sorting Logic
+    const handleSort = (key) => {
+        let direction = 'asc';
+        if (sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const sortedStudents = [...filteredStudents].sort((a, b) => {
+        let aValue, bValue;
+
+        switch (sortConfig.key) {
+            case 'name':
+                aValue = a.name?.toLowerCase() || '';
+                bValue = b.name?.toLowerCase() || '';
+                break;
+            case 'class':
+                const classA = classes.find(c => c.id === a.classId)?.name || '';
+                const classB = classes.find(c => c.id === b.classId)?.name || '';
+                aValue = classA;
+                bValue = classB;
+                break;
+            case 'status':
+                // Sort by status priority: submitted > late > ungraded > not_submitted
+                const getStatusPriority = (student) => {
+                    const { status } = getSubmissionStatus(student);
+                    if (status === 'ungraded') return 3;
+                    if (status === 'submitted') return 2; // graded
+                    if (status === 'late') return 1;
+                    return 0; // not_submitted
+                };
+                aValue = getStatusPriority(a);
+                bValue = getStatusPriority(b);
+                break;
+            case 'submittedAt':
+                const subA = submissions[a.uid] || submissions[a.id];
+                const subB = submissions[b.uid] || submissions[b.id];
+                // Use a very old date for no submission so it goes to bottom/top
+                aValue = subA?.submittedAt?.toMillis?.() || subA?.submittedAt || (subA ? new Date(subA.submittedAt).getTime() : 0);
+                bValue = subB?.submittedAt?.toMillis?.() || subB?.submittedAt || (subB ? new Date(subB.submittedAt).getTime() : 0);
+                break;
+            case 'grade':
+                const gradeA = (submissions[a.uid] || submissions[a.id])?.grade ?? -1;
+                const gradeB = (submissions[b.uid] || submissions[b.id])?.grade ?? -1;
+                aValue = gradeA;
+                bValue = gradeB;
+                break;
+            default:
+                return 0;
+        }
+
+        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+    });
+
     // Calculate statistics based on filtered students
     const filteredSubmissions = filteredStudents
         .map(student => submissions[student.uid] || submissions[student.id])
@@ -247,6 +329,18 @@ export default function TaskDetail({ task, classes = [], onBack }) {
             ? (filteredSubmissions.filter(s => s.grade !== undefined && s.grade !== null).reduce((sum, s) => sum + s.grade, 0) /
                 filteredSubmissions.filter(s => s.grade !== undefined && s.grade !== null).length).toFixed(1)
             : 0
+    };
+
+    const SortIcon = ({ column }) => {
+        return (
+            <span className="ml-2 inline-block align-middle">
+                {sortConfig.key === column ? (
+                    sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                ) : (
+                    <ArrowUpDown className="h-3 w-3 text-slate-300 group-hover:text-slate-500" />
+                )}
+            </span>
+        );
     };
 
     return (
@@ -355,34 +449,65 @@ export default function TaskDetail({ task, classes = [], onBack }) {
                     <table className="w-full">
                         <thead className="bg-slate-50/50 border-b border-slate-200">
                             <tr>
-                                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Siswa</th>
-                                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Kelas</th>
-                                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
-                                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Waktu Submit</th>
-                                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Nilai</th>
+                                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider w-16">No</th>
+                                <th
+                                    className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider cursor-pointer group hover:bg-slate-100 transition-colors"
+                                    onClick={() => handleSort('name')}
+                                >
+                                    Siswa <SortIcon column="name" />
+                                </th>
+                                <th
+                                    className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider cursor-pointer group hover:bg-slate-100 transition-colors"
+                                    onClick={() => handleSort('class')}
+                                >
+                                    Kelas <SortIcon column="class" />
+                                </th>
+                                <th
+                                    className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider cursor-pointer group hover:bg-slate-100 transition-colors"
+                                    onClick={() => handleSort('status')}
+                                >
+                                    Status <SortIcon column="status" />
+                                </th>
+                                <th
+                                    className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider cursor-pointer group hover:bg-slate-100 transition-colors"
+                                    onClick={() => handleSort('submittedAt')}
+                                >
+                                    Waktu Submit <SortIcon column="submittedAt" />
+                                </th>
+                                <th
+                                    className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider cursor-pointer group hover:bg-slate-100 transition-colors"
+                                    onClick={() => handleSort('grade')}
+                                >
+                                    Nilai <SortIcon column="grade" />
+                                </th>
                                 <th className="px-6 py-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Aksi</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {loading ? (
                                 <tr>
-                                    <td colSpan="6" className="px-6 py-12 text-center">
+                                    <td colSpan="7" className="px-6 py-12 text-center">
                                         <div className="flex justify-center">
                                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
                                         </div>
                                     </td>
                                 </tr>
-                            ) : filteredStudents.length === 0 ? (
+                            ) : sortedStudents.length === 0 ? (
                                 <tr>
-                                    <td colSpan="6" className="px-6 py-12 text-center text-slate-500">
+                                    <td colSpan="7" className="px-6 py-12 text-center text-slate-500">
                                         Tidak ada siswa ditemukan untuk filter ini.
                                     </td>
                                 </tr>
                             ) : (
-                                filteredStudents.map((student, index) => {
-                                    const { status, label, color, bgColor, borderColor } = getSubmissionStatus(student);
+                                sortedStudents.map((student, index) => {
+                                    const { status, label, color, bgColor, borderColor, icon: StatusIcon } = getSubmissionStatus(student);
                                     const submission = submissions[student.uid] || submissions[student.id];
                                     const cls = classes.find(c => c.id === student.classId);
+
+                                    // Highlight ungraded submissions
+                                    const isUngraded = submission && (submission.grade === undefined || submission.grade === null);
+                                    // Use solid yellow-50 for better visibility, but keep it subtle
+                                    const rowBgClass = isUngraded ? 'bg-yellow-50 hover:bg-yellow-100' : 'hover:bg-slate-50/50';
 
                                     return (
                                         <motion.tr
@@ -390,8 +515,11 @@ export default function TaskDetail({ task, classes = [], onBack }) {
                                             initial={{ opacity: 0 }}
                                             animate={{ opacity: 1 }}
                                             transition={{ delay: index * 0.03 }}
-                                            className="hover:bg-slate-50/50 transition-colors"
+                                            className={`${rowBgClass} transition-colors`}
                                         >
+                                            <td className="px-6 py-4 text-sm text-slate-500 font-medium">
+                                                {index + 1}
+                                            </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">
@@ -410,9 +538,7 @@ export default function TaskDetail({ task, classes = [], onBack }) {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${bgColor} ${color} ${borderColor}`}>
-                                                    {status === 'submitted' && <CheckCircle2 className="h-3 w-3" />}
-                                                    {status === 'late' && <Clock className="h-3 w-3" />}
-                                                    {status === 'not_submitted' && <XCircle className="h-3 w-3" />}
+                                                    <StatusIcon className="h-3 w-3" />
                                                     {label}
                                                 </span>
                                             </td>
