@@ -109,10 +109,10 @@ export default function DashboardLayout({ children }) {
                 {/* Credits Section */}
                 <div className="px-3 py-2 border-t border-slate-100">
                     <div className="text-center space-y-0.5">
-                        <p className="text-[10px] text-slate-400 font-light leading-tight">
+                        <p className="text-xs text-slate-400 font-light leading-tight">
                             Made with <span className="text-red-400">❤️</span> by <span className="font-normal text-slate-500">Mr. Tio</span>
                         </p>
-                        <p className="text-[9px] text-slate-400 font-light leading-tight">
+                        <p className="text-[10px] text-slate-400 font-light leading-tight">
                             Powered by Google Antigravity & Firebase
                         </p>
                     </div>
