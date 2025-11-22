@@ -7,11 +7,11 @@ import {
     BookOpen,
     ClipboardList,
     GraduationCap,
-    LogOut,
     Menu,
     X
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import ProfileDropdown from '../components/ProfileDropdown';
 
 export default function DashboardLayout({ children }) {
     const { currentUser, logout, userRole } = useAuth();
@@ -106,15 +106,16 @@ export default function DashboardLayout({ children }) {
                     </nav>
                 </div>
 
-                {/* Logout Button - Bottom of Sidebar */}
-                <div className="p-4 border-t border-slate-100">
-                    <button
-                        onClick={logout}
-                        className="flex items-center gap-3 px-4 py-3 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 hover:text-red-700 transition-all w-full font-medium border border-red-200/50 hover:border-red-300"
-                    >
-                        <LogOut className="h-5 w-5" />
-                        <span>Keluar</span>
-                    </button>
+                {/* Credits Section */}
+                <div className="p-4 border-t border-slate-100 bg-gradient-to-br from-slate-50 to-blue-50/30">
+                    <div className="text-center space-y-1">
+                        <p className="text-xs text-slate-600 font-medium">
+                            Made with <span className="text-red-500">❤️</span> by <span className="font-bold text-blue-600">Mr. Tio</span>
+                        </p>
+                        <p className="text-xs text-slate-400">
+                            Powered by <span className="font-semibold">Google Antigravity</span> & <span className="font-semibold">Firebase</span>
+                        </p>
+                    </div>
                 </div>
             </motion.aside>
 
@@ -130,15 +131,7 @@ export default function DashboardLayout({ children }) {
                         {sidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
                     </button>
 
-                    <div className="flex items-center gap-3">
-                        <div className="text-right hidden sm:block">
-                            <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Selamat datang</p>
-                            <p className="font-semibold text-slate-800 truncate max-w-[200px]">{currentUser?.email}</p>
-                        </div>
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center text-white font-bold shadow-md shadow-blue-200 flex-shrink-0">
-                            {currentUser?.email?.[0].toUpperCase()}
-                        </div>
-                    </div>
+                    <ProfileDropdown currentUser={currentUser} logout={logout} />
                 </header>
 
                 {/* Page Content */}
