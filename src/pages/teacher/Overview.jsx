@@ -25,16 +25,47 @@ export default function TeacherOverview() {
     const loadData = async () => {
         setLoading(true);
         try {
-            const studentsSnap = await getDocs(
-                query(collection(db, 'users'), where('role', '==', 'student'))
+            // 1. Load Classes created by this teacher
+            const classesQuery = query(
+                collection(db, 'classes'),
+                where('createdBy', '==', currentUser.uid)
             );
-            const classesSnap = await getDocs(collection(db, 'classes'));
-            const tasksSnap = await getDocs(collection(db, 'tasks'));
+            const classesSnap = await getDocs(classesQuery);
+            const teacherClassIds = classesSnap.docs.map(doc => doc.id);
+
+            // 2. Load Students in these classes
+            let studentsSnap = { size: 0, docs: [] };
+            if (teacherClassIds.length > 0) {
+                const allStudentsQuery = query(collection(db, 'users'), where('role', '==', 'student'));
+                const allStudentsSnap = await getDocs(allStudentsQuery);
+                // Filter client-side for simplicity as 'in' query has limits
+                const filteredStudents = allStudentsSnap.docs.filter(doc =>
+                    teacherClassIds.includes(doc.data().classId)
+                );
+                studentsSnap = { size: filteredStudents.length, docs: filteredStudents };
+            }
+            // 3. Load Tasks created by this teacher
+            const tasksQuery = query(
+                collection(db, 'tasks'),
+                where('createdBy', '==', currentUser.uid)
+            );
+            const tasksSnap = await getDocs(tasksQuery);
+            const teacherTaskIds = tasksSnap.docs.map(doc => doc.id);
             const activeTasks = tasksSnap.docs.filter(doc => {
                 const deadline = doc.data().deadline;
                 return deadline && new Date(deadline) > new Date();
             });
-            const submissionsSnap = await getDocs(collection(db, 'submissions'));
+            // 4. Load Submissions for these tasks
+            let submissionsSnap = { docs: [] };
+            if (teacherTaskIds.length > 0) {
+                // We fetch all submissions and filter because we can't easily query by taskId 'in' if list is huge
+                // Optimization: In a real app with huge data, we might need a better strategy or compound queries
+                const allSubmissionsSnap = await getDocs(collection(db, 'submissions'));
+                const filteredSubmissions = allSubmissionsSnap.docs.filter(doc =>
+                    teacherTaskIds.includes(doc.data().taskId)
+                );
+                submissionsSnap = { docs: filteredSubmissions };
+            }
             const needsGrading = submissionsSnap.docs.filter(doc => {
                 const grade = doc.data().grade;
                 return grade === null || grade === undefined;

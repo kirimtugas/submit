@@ -3,7 +3,10 @@ import { db } from '../../lib/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { Search, TrendingUp, Users, FileText, Target, CheckCircle, Clock, AlertCircle, ArrowUpDown } from 'lucide-react';
 
+import { useAuth } from '../../contexts/AuthContext';
+
 export default function Gradebook() {
+    const { currentUser } = useAuth();
     const [students, setStudents] = useState([]);
     const [tasks, setTasks] = useState([]);
     const [submissions, setSubmissions] = useState([]);
@@ -16,8 +19,10 @@ export default function Gradebook() {
     const [sortOrder, setSortOrder] = useState('asc');
 
     useEffect(() => {
-        loadData();
-    }, []);
+        if (currentUser) {
+            loadData();
+        }
+    }, [currentUser]);
 
     useEffect(() => {
         if (students.length > 0 && !selectedStudent) {
@@ -28,23 +33,51 @@ export default function Gradebook() {
     const loadData = async () => {
         setLoading(true);
         try {
-            const classesSnap = await getDocs(collection(db, 'classes'));
+            // 1. Load Classes created by this teacher
+            const classesQuery = query(
+                collection(db, 'classes'),
+                where('createdBy', '==', currentUser.uid)
+            );
+            const classesSnap = await getDocs(classesQuery);
+            const teacherClassIds = classesSnap.docs.map(doc => doc.id);
             setClasses(classesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
 
-            const studentsSnap = await getDocs(query(collection(db, 'users'), where('role', '==', 'student')));
-            const studentsList = studentsSnap.docs.map(doc => {
-                const data = doc.data();
-                // Use uid from data if available, otherwise use document id
-                const studentId = data.uid || doc.id;
-                return {
-                    id: doc.id,
-                    ...data,
-                    uid: studentId  // Ensure uid is always set
-                };
-            });
+            // 2. Load Students in these classes
+            let studentsList = [];
+            if (teacherClassIds.length > 0) {
+                const allStudentsQuery = query(collection(db, 'users'), where('role', '==', 'student'));
+                const allStudentsSnap = await getDocs(allStudentsQuery);
 
-            const submissionsSnap = await getDocs(collection(db, 'submissions'));
-            const submissionsList = submissionsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                studentsList = allStudentsSnap.docs
+                    .filter(doc => teacherClassIds.includes(doc.data().classId))
+                    .map(doc => {
+                        const data = doc.data();
+                        const studentId = data.uid || doc.id;
+                        return {
+                            id: doc.id,
+                            ...data,
+                            uid: studentId
+                        };
+                    });
+            }
+
+            // 3. Load Tasks created by this teacher
+            const tasksQuery = query(
+                collection(db, 'tasks'),
+                where('createdBy', '==', currentUser.uid)
+            );
+            const tasksSnap = await getDocs(tasksQuery);
+            const teacherTaskIds = tasksSnap.docs.map(doc => doc.id);
+            setTasks(tasksSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+
+            // 4. Load Submissions for these tasks
+            let submissionsList = [];
+            if (teacherTaskIds.length > 0) {
+                const allSubmissionsSnap = await getDocs(collection(db, 'submissions'));
+                submissionsList = allSubmissionsSnap.docs
+                    .filter(doc => teacherTaskIds.includes(doc.data().taskId))
+                    .map(doc => ({ id: doc.id, ...doc.data() }));
+            }
             setSubmissions(submissionsList);
 
             const studentsWithLastSubmission = studentsList.map(student => {
@@ -59,8 +92,8 @@ export default function Gradebook() {
             studentsWithLastSubmission.sort((a, b) => b.lastSubmission - a.lastSubmission);
             setStudents(studentsWithLastSubmission);
 
-            const tasksSnap = await getDocs(collection(db, 'tasks'));
-            setTasks(tasksSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            // Tasks already loaded above
+            // setTasks(tasksSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
 
         } catch (error) {
             console.error('Error loading data:', error);
