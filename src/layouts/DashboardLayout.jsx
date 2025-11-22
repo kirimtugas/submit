@@ -110,7 +110,7 @@ export default function DashboardLayout({ children }) {
                 <div className="p-4 border-t border-slate-100">
                     <button
                         onClick={logout}
-                        className="flex items-center justify-center gap-3 px-4 py-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-600 hover:text-red-700 transition-all w-full font-semibold border border-red-200/50 hover:border-red-300"
+                        className="flex items-center gap-3 px-4 py-3 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 hover:text-red-700 transition-all w-full font-medium border border-red-200/50 hover:border-red-300"
                     >
                         <LogOut className="h-5 w-5" />
                         <span>Keluar</span>
