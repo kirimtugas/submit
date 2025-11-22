@@ -50,11 +50,13 @@ export default function Tasks() {
             // Load tasks created by this teacher
             const q = query(
                 collection(db, 'tasks'),
-                where('createdBy', '==', currentUser.uid),
-                orderBy('createdAt', 'desc')
+                where('createdBy', '==', currentUser.uid)
             );
             const tasksSnap = await getDocs(q);
-            setTasks(tasksSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            setTasks(tasksSnap.docs
+                .map(doc => ({ id: doc.id, ...doc.data() }))
+                .sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0))
+            );
         } catch (error) {
             console.error('Error loading data:', error);
         } finally {

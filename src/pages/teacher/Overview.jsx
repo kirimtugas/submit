@@ -19,8 +19,10 @@ export default function TeacherOverview() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        loadData();
-    }, []);
+        if (currentUser) {
+            loadData();
+        }
+    }, [currentUser]);
 
     const loadData = async () => {
         setLoading(true);
@@ -146,11 +148,13 @@ export default function TeacherOverview() {
                     </h1>
                     <p className="text-slate-500 mt-1">Selamat datang kembali, {currentUser?.email}</p>
                 </div>
-                <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm border border-blue-100">
-                    <Calendar className="h-5 w-5 text-blue-500" />
-                    <span className="text-sm font-medium text-slate-600">
-                        {new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                    </span>
+                <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm border border-blue-100">
+                        <Calendar className="h-5 w-5 text-blue-500" />
+                        <span className="text-sm font-medium text-slate-600">
+                            {new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                        </span>
+                    </div>
                 </div>
             </div>
 

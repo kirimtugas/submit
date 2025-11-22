@@ -28,11 +28,12 @@ export default function Classes() {
         try {
             const q = query(
                 collection(db, 'classes'),
-                where('createdBy', '==', currentUser.uid),
-                orderBy('createdAt', 'desc')
+                where('createdBy', '==', currentUser.uid)
             );
             const snapshot = await getDocs(q);
-            const classesList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const classesList = snapshot.docs
+                .map(doc => ({ id: doc.id, ...doc.data() }))
+                .sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
             setClasses(classesList);
 
             // Load stats for each class
